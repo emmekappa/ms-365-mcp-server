@@ -23,6 +23,7 @@ function jwt(claims: Record<string, unknown>): string {
 }
 
 const CALLER = jwt({ tid: TENANT, appid: CLIENT });
+const ANNA_ID = '33333333-3333-3333-3333-333333333333';
 
 const REQUEST = {
   users: ['anna@example.com'],
@@ -68,7 +69,14 @@ function graph(level: string) {
     if (url.endsWith('/v1.0/me?$select=id')) {
       return auth === `Bearer ${CALLER}` ? json({ id: 'me' }) : json({}, 401);
     }
+    if (url.endsWith('/v1.0/users/anna%40example.com?$select=id')) {
+      // Resolved with the caller's token, not the app's
+      expect(auth).toBe(`Bearer ${CALLER}`);
+      return json({ id: ANNA_ID });
+    }
     expect(auth).toBe('Bearer app-token');
+    // occurrencesView fails on a UPN, so the work plan is always read by object id
+    expect(url).toContain(`/users/${ANNA_ID}/settings/`);
     if (url.includes('occurrencesView')) return json({ value: [OCCURRENCE] });
     if (url.includes('maxSharedWorkLocationDetails')) {
       return json({ maxSharedWorkLocationDetails: level });
@@ -144,6 +152,28 @@ describe('sharing level', () => {
     const [result] = await getColleagueWorkLocations(CALLER, REQUEST, d);
     expect(result).toHaveProperty('error');
     expect(calls.some((c) => c.includes('occurrencesView'))).toBe(false);
+  });
+});
+
+describe('user resolution and errors', () => {
+  it('uses an object id as is, without a lookup', async () => {
+    const { deps: d, calls } = deps(graph('approximate'));
+    const [result] = await getColleagueWorkLocations(CALLER, { ...REQUEST, users: [ANNA_ID] }, d);
+    expect(result).toMatchObject({ user: ANNA_ID, shared: true });
+    expect(calls.some((c) => c.includes('/users/') && c.endsWith('?$select=id'))).toBe(false);
+  });
+
+  it('reports a user the directory does not know, with the Graph message', async () => {
+    const { deps: d } = deps((url, auth) =>
+      url.includes('/users/') && url.endsWith('?$select=id')
+        ? json({ error: { message: "Resource 'x' does not exist" } }, 404)
+        : graph('approximate')(url, auth)
+    );
+    const [result] = await getColleagueWorkLocations(CALLER, REQUEST, d);
+    expect(result).toEqual({
+      user: 'anna@example.com',
+      error: "User not found. Resource 'x' does not exist",
+    });
   });
 });
 
