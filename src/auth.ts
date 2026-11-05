@@ -28,6 +28,7 @@ import {
   unwrapCache,
   wrapCache,
 } from './token-cache-storage.js';
+import { isDroppedByReadOnly } from './lib/read-only.js';
 
 interface EndpointConfig {
   pathPattern: string;
@@ -499,10 +500,8 @@ function buildScopesFromEndpoints(
 
   endpoints.default.forEach((endpoint) => {
     // Skip write operations in read-only mode
-    if (readOnly && endpoint.method.toUpperCase() !== 'GET') {
-      if (!(endpoint.method.toUpperCase() === 'POST' && endpoint.readOnly)) {
-        return;
-      }
+    if (isDroppedByReadOnly(readOnly, endpoint.method, endpoint.toolName, endpoint)) {
+      return;
     }
 
     // Skip endpoints that don't match the tool filter
@@ -586,10 +585,8 @@ function endpointMatchesNormalToolSurface(
   enabledToolsRegex?: RegExp,
   readOnly: boolean = false
 ): boolean {
-  if (readOnly && endpoint.method.toUpperCase() !== 'GET') {
-    if (!(endpoint.method.toUpperCase() === 'POST' && endpoint.readOnly)) {
-      return false;
-    }
+  if (isDroppedByReadOnly(readOnly, endpoint.method, endpoint.toolName, endpoint)) {
+    return false;
   }
 
   if (enabledToolsRegex && !enabledToolsRegex.test(endpoint.toolName)) {

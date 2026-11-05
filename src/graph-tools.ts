@@ -90,6 +90,7 @@ import {
 import logger from './logger.js';
 import { getRequestTokens } from './request-context.js';
 import { TOOL_CATEGORIES } from './tool-categories.js';
+import { isDroppedByReadOnly } from './lib/read-only.js';
 
 // Tools from every Graph API version share one registry. Each tool's version is carried
 // by its endpoints.json config (apiVersion), so the generated clients stay version-agnostic
@@ -1061,7 +1062,7 @@ function collectDeniedToolPolicies(options: {
     }
 
     const method = tool.method.toUpperCase();
-    if (options.readOnly && method !== 'GET' && !(method === 'POST' && endpointConfig?.readOnly)) {
+    if (isDroppedByReadOnly(options.readOnly, method, tool.alias, endpointConfig)) {
       continue;
     }
 
@@ -3827,15 +3828,13 @@ export function registerGraphTools(
     }
 
     const method = tool.method.toUpperCase();
-    if (readOnly && method !== 'GET') {
-      // Allow POST endpoints that are explicitly marked as readOnly in endpoints.json
-      // (e.g. get-schedule, find-meeting-times which are read-only queries via POST).
-      // PATCH/DELETE are always blocked in read-only mode.
-      if (!(method === 'POST' && endpointConfig?.readOnly)) {
-        logger.info(`Skipping write operation ${tool.alias} in read-only mode`);
-        skippedCount++;
-        continue;
-      }
+    // Read-only mode keeps GETs, POST queries marked readOnly in endpoints.json
+    // (e.g. get-schedule, find-meeting-times) and the write tools named by
+    // MS365_MCP_READ_ONLY_ALLOW_TOOLS (lib/read-only.ts).
+    if (isDroppedByReadOnly(readOnly, method, tool.alias, endpointConfig)) {
+      logger.info(`Skipping write operation ${tool.alias} in read-only mode`);
+      skippedCount++;
+      continue;
     }
 
     if (enabledToolsRegex && !enabledToolsRegex.test(tool.alias)) {
@@ -4041,10 +4040,8 @@ export function buildToolsRegistry(
     }
 
     const method = tool.method.toUpperCase();
-    if (readOnly && method !== 'GET') {
-      if (!(method === 'POST' && endpointConfig?.readOnly)) {
-        continue;
-      }
+    if (isDroppedByReadOnly(readOnly, method, tool.alias, endpointConfig)) {
+      continue;
     }
 
     if (enabledToolsRegex && !enabledToolsRegex.test(tool.alias)) {

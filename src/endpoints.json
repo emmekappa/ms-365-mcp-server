@@ -1775,6 +1775,30 @@
     "llmTip": "Gets the current user's mailbox settings including automaticRepliesSetting (out-of-office status, message, scheduledStartDateTime/EndDateTime, externalAudience), language, timeZone, dateFormat, timeFormat, delegateMeetingMessageDeliveryOptions, and userPurpose."
   },
   {
+    "pathPattern": "/me/settings/workHoursAndLocations",
+    "method": "get",
+    "toolName": "get-my-work-hours-and-locations",
+    "presets": ["calendar", "work"],
+    "workScopes": ["Calendars.Read"],
+    "llmTip": "Gets the signed-in user's work hours and locations setting (maxSharedWorkLocationDetails: none, approximate, specific). Use get-my-work-location-occurrences for where the user works on given days. Work accounts only; the API reaches only the signed-in user, never colleagues."
+  },
+  {
+    "pathPattern": "/me/settings/workHoursAndLocations/occurrencesView(startDateTime='{startDateTime}',endDateTime='{endDateTime}')",
+    "method": "get",
+    "toolName": "get-my-work-location-occurrences",
+    "presets": ["calendar", "work"],
+    "workScopes": ["Calendars.Read"],
+    "llmTip": "Lists the signed-in user's work plan occurrences between startDateTime and endDateTime (ISO 8601, e.g. 2026-11-05T00:00:00Z). Each occurrence has workLocationType (office, remote, timeOff, unspecified), start, end and, for office, placeId (a Places Directory ID, resolvable with the room tools). Use it to answer 'am I in the office today/this week'. Work accounts only; the API reaches only the signed-in user, never colleagues."
+  },
+  {
+    "pathPattern": "/me/settings/workHoursAndLocations/occurrences/setCurrentLocation",
+    "method": "post",
+    "toolName": "set-my-current-work-location",
+    "presets": ["calendar", "work"],
+    "workScopes": ["Calendars.ReadWrite"],
+    "llmTip": "Sets the signed-in user's work location for now. Body: { workLocationType: 'office'|'remote', updateScope: 'currentDay'|'currentSegment', placeId?: string (office only, a Places Directory ID) }. Returns 204 No Content. Use currentDay unless the user asks only for the current segment. Confirm with get-my-work-location-occurrences for today. Work accounts only."
+  },
+  {
     "pathPattern": "/me/mailboxSettings",
     "method": "patch",
     "toolName": "update-mailbox-settings",
