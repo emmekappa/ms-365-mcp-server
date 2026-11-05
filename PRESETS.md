@@ -8,8 +8,8 @@ Tool and scope lists assume `--org-mode`; without it, personal accounts get fewe
 
 | Preset        | Mode                                                             |      Tools |   Scopes | Org mode             | Description                                                                                                                       |
 | ------------- | ---------------------------------------------------------------- | ---------: | -------: | -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `all`         | [full](#all-full)<br>[read only](#all-read-only)                 | 369<br>180 | 63<br>37 | -<br>-               | All available tools                                                                                                               |
-| `calendar`    | [full](#calendar-full)<br>[read only](#calendar-read-only)       |   47<br>22 |   7<br>5 | -<br>-               | Calendar and event management                                                                                                     |
+| `all`         | [full](#all-full)<br>[read only](#all-read-only)                 | 372<br>182 | 63<br>37 | -<br>-               | All available tools                                                                                                               |
+| `calendar`    | [full](#calendar-full)<br>[read only](#calendar-read-only)       |   50<br>24 |   7<br>5 | -<br>-               | Calendar and event management                                                                                                     |
 | `contacts`    | [full](#contacts-full)<br>[read only](#contacts-read-only)       |    15<br>7 |   1<br>1 | -<br>-               | Outlook contacts management                                                                                                       |
 | `excel`       | [full](#excel-full)<br>[read only](#excel-read-only)             |    25<br>9 |   1<br>1 | -<br>-               | Excel spreadsheet operations                                                                                                      |
 | `files`       | [full](#files-full)<br>[read only](#files-read-only)             |   25<br>14 |   3<br>2 | -<br>-               | OneDrive file and folder operations                                                                                               |
@@ -23,13 +23,13 @@ Tool and scope lists assume `--org-mode`; without it, personal accounts get fewe
 | `teams`       | [full](#teams-full)<br>[read only](#teams-read-only)             |   73<br>43 | 31<br>18 | required<br>required | Teams app only: chats, channels, meetings and presence                                                                            |
 | `teams-write` | [full](#teams-write-full)<br>[read only](#teams-write-read-only) |    11<br>7 |   6<br>3 | required<br>required | Teams send-only: send/reply in chats and channels, list chats/teams/channels by name, activity notifications - no message reading |
 | `users`       | [full](#users-full)<br>[read only](#users-read-only)             |   11<br>11 |   4<br>4 | required<br>required | User directory access                                                                                                             |
-| `work`        | [full](#work-full)<br>[read only](#work-read-only)               | 190<br>110 | 56<br>33 | required<br>required | Organization/work tools (Teams, SharePoint, shared mailboxes, search)                                                             |
+| `work`        | [full](#work-full)<br>[read only](#work-read-only)               | 193<br>112 | 56<br>33 | required<br>required | Organization/work tools (Teams, SharePoint, shared mailboxes, search)                                                             |
 
 ## `all` full
 
 All available tools
 
-Tools (369):
+Tools (372):
 
 - `accept-calendar-event`
 - `add-calendar-event-attachment`
@@ -179,6 +179,8 @@ Tools (369):
 - `get-my-manager`
 - `get-my-presence`
 - `get-my-profile`
+- `get-my-work-hours-and-locations`
+- `get-my-work-location-occurrences`
 - `get-onenote-notebook-from-web-url`
 - `get-onenote-page-content`
 - `get-online-meeting`
@@ -352,6 +354,7 @@ Tools (369):
 - `send-shared-mailbox-mail`
 - `set-channel-message-reaction`
 - `set-chat-message-reaction`
+- `set-my-current-work-location`
 - `set-my-presence`
 - `set-my-status-message`
 - `set-my-user-preferred-presence`
@@ -471,7 +474,7 @@ Scopes (63):
 
 All available tools
 
-Tools (180):
+Tools (182):
 
 - `copilot-retrieve`
 - `download-bytes`
@@ -508,6 +511,8 @@ Tools (180):
 - `get-my-manager`
 - `get-my-presence`
 - `get-my-profile`
+- `get-my-work-hours-and-locations`
+- `get-my-work-location-occurrences`
 - `get-onenote-notebook-from-web-url`
 - `get-onenote-page-content`
 - `get-online-meeting`
@@ -698,7 +703,7 @@ Scopes (37):
 
 Calendar and event management
 
-Tools (47):
+Tools (50):
 
 - `accept-calendar-event`
 - `add-calendar-event-attachment`
@@ -721,6 +726,8 @@ Tools (47):
 - `forward-calendar-event`
 - `get-calendar-event`
 - `get-calendar-view`
+- `get-my-work-hours-and-locations`
+- `get-my-work-location-occurrences`
 - `get-room`
 - `get-room-list`
 - `get-room-list-room`
@@ -739,6 +746,7 @@ Tools (47):
 - `list-specific-calendar-events`
 - `list-supported-languages`
 - `list-supported-time-zones`
+- `set-my-current-work-location`
 - `snooze-calendar-event-reminder`
 - `tentatively-accept-calendar-event`
 - `update-calendar`
@@ -762,13 +770,15 @@ Scopes (7):
 
 Calendar and event management
 
-Tools (22):
+Tools (24):
 
 - `download-bytes`
 - `download-bytes-to-file`
 - `find-meeting-times`
 - `get-calendar-event`
 - `get-calendar-view`
+- `get-my-work-hours-and-locations`
+- `get-my-work-location-occurrences`
 - `get-room`
 - `get-room-list`
 - `get-room-list-room`
@@ -2079,7 +2089,7 @@ Organization/work tools (Teams, SharePoint, shared mailboxes, search)
 
 Requires `--org-mode`.
 
-Tools (190):
+Tools (193):
 
 - `add-group-member`
 - `add-group-owner`
@@ -2140,6 +2150,8 @@ Tools (190):
 - `get-my-manager`
 - `get-my-presence`
 - `get-my-profile`
+- `get-my-work-hours-and-locations`
+- `get-my-work-location-occurrences`
 - `get-online-meeting`
 - `get-planner-bucket`
 - `get-planner-plan`
@@ -2248,6 +2260,7 @@ Tools (190):
 - `send-shared-mailbox-mail`
 - `set-channel-message-reaction`
 - `set-chat-message-reaction`
+- `set-my-current-work-location`
 - `set-my-presence`
 - `set-my-status-message`
 - `set-my-user-preferred-presence`
@@ -2274,8 +2287,8 @@ Tools (190):
 
 Scopes (56):
 
-- `Calendars.Read`
 - `Calendars.Read.Shared`
+- `Calendars.ReadWrite`
 - `Calendars.ReadWrite.Shared`
 - `CallTranscripts.Read.All`
 - `Channel.Create`
@@ -2337,7 +2350,7 @@ Organization/work tools (Teams, SharePoint, shared mailboxes, search)
 
 Requires `--org-mode`.
 
-Tools (110):
+Tools (112):
 
 - `copilot-retrieve`
 - `download-bytes`
@@ -2359,6 +2372,8 @@ Tools (110):
 - `get-my-manager`
 - `get-my-presence`
 - `get-my-profile`
+- `get-my-work-hours-and-locations`
+- `get-my-work-location-occurrences`
 - `get-online-meeting`
 - `get-planner-bucket`
 - `get-planner-plan`

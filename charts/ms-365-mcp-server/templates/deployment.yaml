@@ -1,0 +1,123 @@
+{{- $c := .Values.config -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ms365mcp.fullname" . }}
+  labels:
+    {{- include "ms365mcp.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ms365mcp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ms365mcp.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "ms365mcp.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: server
+          image: {{ include "ms365mcp.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --http
+            - {{ $c.port | quote }}
+          env:
+            - name: MS365_MCP_ORG_MODE
+              value: {{ $c.orgMode | quote }}
+            - name: READ_ONLY
+              value: {{ $c.readOnly | quote }}
+            {{- with $c.readOnlyAllowTools }}
+            - name: MS365_MCP_READ_ONLY_ALLOW_TOOLS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $c.publicUrl }}
+            - name: MS365_MCP_PUBLIC_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with $c.allowedRedirectUris }}
+            - name: MS365_MCP_ALLOWED_REDIRECT_URIS
+              value: {{ ternary . (join "," .) (kindIs "string" .) | quote }}
+            {{- end }}
+            {{- with $c.allowedScopes }}
+            - name: MS365_MCP_ALLOWED_SCOPES
+              value: {{ ternary . (join " " .) (kindIs "string" .) | quote }}
+            {{- end }}
+            {{- with $c.trustProxyHops }}
+            - name: MS365_MCP_TRUST_PROXY_HOPS
+              value: {{ . | quote }}
+            {{- end }}
+            # The root filesystem is read-only: the server's home and its
+            # logs (also on stderr) live in /tmp.
+            - name: HOME
+              value: /tmp
+            - name: MS365_MCP_LOG_DIR
+              value: /tmp/logs
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if or .Values.existingSecret .Values.extraEnvFrom }}
+          envFrom:
+            {{- with .Values.existingSecret }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+            {{- with .Values.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ $c.port }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: {{ .Values.tmp.sizeLimit }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

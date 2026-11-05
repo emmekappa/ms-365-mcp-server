@@ -830,6 +830,7 @@ When running as an MCP server, the following options can be used:
 Environment variables:
 
 - `READ_ONLY=true|1`: Alternative to --read-only flag
+- `MS365_MCP_READ_ONLY_ALLOW_TOOLS=<regex>`: Write tools that read-only mode keeps anyway, matched against the whole tool name (case-insensitive). For example `set-my-current-work-location` keeps a deployment read-only except for setting the user's own work location. Grant the scopes those tools need (here `Calendars.ReadWrite`).
 - `ENABLED_TOOLS`: Filter tools using a regex pattern (alternative to --enabled-tools flag)
 - `ENABLED_TOOLS_FILE`: Path to a file with one regex per line (alternative to --enabled-tools-file). Blank lines and whole-line `#` comments are dropped, then lines are joined with `|` (same as `ENABLED_TOOLS=line1|line2|…`). Layering (later wins): `--enabled-tools` → `--enabled-tools-file` → `--preset` → `ENABLED_TOOLS` → `ENABLED_TOOLS_FILE`
 - `MS365_MCP_ORG_MODE=true|1`: Enable organization/work mode (alternative to --org-mode flag)

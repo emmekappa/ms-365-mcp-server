@@ -1,0 +1,91 @@
+# Publishes this fork: the image built from source on every push to main, and
+# the Helm chart when charts/ms-365-mcp-server/Chart.yaml carries a version
+# that is not yet in the registry. Upstream's release.yml (semantic-release,
+# npm, MCP Registry) is disabled in the fork.
+name: Publish fork
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/ms-365-mcp-server
+  CHART_REPO: oci://ghcr.io/${{ github.repository_owner }}/charts
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run generate
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test
+
+  image:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag
+        id: meta
+        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.meta.outputs.tag }}
+            ${{ env.IMAGE }}:main
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Summary
+        run: echo "Image \`${IMAGE}:${{ steps.meta.outputs.tag }}@${{ steps.build.outputs.digest }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  chart:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+      - run: helm lint charts/ms-365-mcp-server
+      - name: Push the chart if its version is new
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GHCR_TOKEN" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin
+          VERSION=$(yq '.version' charts/ms-365-mcp-server/Chart.yaml)
+          if helm show chart "$CHART_REPO/ms-365-mcp-server" --version "$VERSION" >/dev/null 2>&1; then
+            echo "Chart $VERSION already published, nothing to do"
+            exit 0
+          fi
+          helm package charts/ms-365-mcp-server -d dist-chart
+          helm push "dist-chart/ms-365-mcp-server-$VERSION.tgz" "$CHART_REPO"
+          echo "Chart \`$CHART_REPO/ms-365-mcp-server:$VERSION\`" >> "$GITHUB_STEP_SUMMARY"

@@ -3,6 +3,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { readEnabledToolsFromFile } from './lib/enabled-tools-file.js';
+import { compileReadOnlyAllowTools, READ_ONLY_ALLOW_TOOLS_ENV } from './lib/read-only.js';
 import { assertSignoffMarkersVisible } from './lib/message-signoff.js';
 import { assertUploadDirsAbsolute } from './lib/upload-dirs.js';
 import { getCombinedPresetPattern, listPresets, presetRequiresOrgMode } from './tool-categories.js';
@@ -417,6 +418,20 @@ export function parseArgs(): CommandOptions {
       console.error(
         `Error: invalid --enabled-tools regex pattern: "${options.enabledTools}". ` +
           `Without a valid filter, all tools would be exposed.`
+      );
+      process.exit(1);
+    }
+  }
+
+  // Validate the read-only allow list the same way: an invalid pattern must stop
+  // the server, never fall back to some other set of write tools.
+  const readOnlyAllowTools = process.env[READ_ONLY_ALLOW_TOOLS_ENV]?.trim();
+  if (readOnlyAllowTools) {
+    try {
+      compileReadOnlyAllowTools(readOnlyAllowTools);
+    } catch {
+      console.error(
+        `Error: invalid ${READ_ONLY_ALLOW_TOOLS_ENV} regex pattern: "${readOnlyAllowTools}".`
       );
       process.exit(1);
     }
