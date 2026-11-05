@@ -91,6 +91,14 @@ import logger from './logger.js';
 import { getRequestTokens } from './request-context.js';
 import { TOOL_CATEGORIES } from './tool-categories.js';
 import { isDroppedByReadOnly } from './lib/read-only.js';
+import {
+  COLLEAGUE_WORK_LOCATIONS_TOOL,
+  MAX_USERS,
+  colleagueWorkLocationsEnabled,
+  getColleagueWorkLocations,
+  getDefaultDeps as getColleagueWorkLocationsDeps,
+  validateRequest,
+} from './lib/colleague-work-locations.js';
 
 // Tools from every Graph API version share one registry. Each tool's version is carried
 // by its endpoints.json config (apiVersion), so the generated clients stay version-agnostic
@@ -1677,6 +1685,59 @@ export const UTILITY_TOOLS: readonly UtilityTool[] = [
       try {
         const joinWebUrl = parseTeamsUrl(url);
         return { content: [{ type: 'text', text: joinWebUrl }] };
+      } catch (error) {
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ error: (error as Error).message }) }],
+          isError: true,
+        };
+      }
+    },
+  },
+  {
+    name: COLLEAGUE_WORK_LOCATIONS_TOOL,
+    method: 'GET',
+    path: `tool:${COLLEAGUE_WORK_LOCATIONS_TOOL}`,
+    description:
+      "Gets colleagues' work locations (office, remote, timeOff, unspecified) with start and end, for a date range: who is in the office tomorrow, this week, on a given day. Name up to 25 users by email or user id (find them with list-users or search people first). Honours each colleague's sharing setting: users who share nothing come back with shared=false; placeId appears only for users who share specific locations. Ranges up to 31 days. For your own plan use get-my-work-location-occurrences.",
+    searchKeywords:
+      'colleague colleagues team office remote work location hybrid who is in the office places presence workplan',
+    readOnlyHint: true,
+    openWorldHint: true,
+    enabled: colleagueWorkLocationsEnabled,
+    buildSchema: () => ({
+      users: z
+        .array(z.string())
+        .min(1)
+        .max(MAX_USERS)
+        .describe('Email addresses (UPN) or user ids of the colleagues'),
+      startDateTime: z.string().describe('Start of the range, ISO 8601, e.g. 2026-11-06T00:00:00Z'),
+      endDateTime: z.string().describe('End of the range, ISO 8601, e.g. 2026-11-06T23:59:59Z'),
+      timeZone: z
+        .string()
+        .optional()
+        .describe('Time zone for start and end in the result, e.g. "Europe/Rome". Default UTC.'),
+    }),
+    execute: async (params) => {
+      const request = {
+        users: params.users as string[],
+        startDateTime: params.startDateTime as string,
+        endDateTime: params.endDateTime as string,
+        timeZone: params.timeZone as string | undefined,
+      };
+      const invalid = validateRequest(request);
+      if (invalid) {
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ error: invalid }) }],
+          isError: true,
+        };
+      }
+      try {
+        const results = await getColleagueWorkLocations(
+          getRequestTokens()?.accessToken,
+          request,
+          await getColleagueWorkLocationsDeps()
+        );
+        return { content: [{ type: 'text', text: JSON.stringify({ value: results }) }] };
       } catch (error) {
         return {
           content: [{ type: 'text', text: JSON.stringify({ error: (error as Error).message }) }],

@@ -22,6 +22,11 @@ config:
   # MS365_MCP_READ_ONLY_ALLOW_TOOLS: write tools that read-only mode keeps
   # anyway, a regex matched against the whole tool name.
   readOnlyAllowTools: ""
+  # MS365_MCP_COLLEAGUE_WORK_LOCATIONS: serve get-colleague-work-locations, which
+  # reads colleagues' work plans with the app's own token (client credentials).
+  # Grant the app "Application Calendars.Read" through RBAC for Applications in
+  # Exchange Online, scoped to the mailboxes it may read.
+  colleagueWorkLocations: false
   # MS365_MCP_PUBLIC_URL: the URL clients reach, such as https://mcp.example.com.
   publicUrl: ""
   # MS365_MCP_ALLOWED_REDIRECT_URIS: OAuth redirect URIs of the MCP clients, a

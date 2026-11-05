@@ -48,6 +48,10 @@ spec:
             - name: MS365_MCP_READ_ONLY_ALLOW_TOOLS
               value: {{ . | quote }}
             {{- end }}
+            {{- if $c.colleagueWorkLocations }}
+            - name: MS365_MCP_COLLEAGUE_WORK_LOCATIONS
+              value: "true"
+            {{- end }}
             {{- with $c.publicUrl }}
             - name: MS365_MCP_PUBLIC_URL
               value: {{ . | quote }}
