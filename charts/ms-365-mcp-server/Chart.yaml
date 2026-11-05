@@ -1,0 +1,11 @@
+apiVersion: v2
+name: ms-365-mcp-server
+description: Microsoft 365 MCP server (Microsoft Graph) in HTTP mode with OAuth, for a multi-user remote connector.
+type: application
+version: 0.1.0
+# The image tag the chart deploys when image.tag is empty. CI sets it to the
+# tag of the image built from the same commit.
+appVersion: "0.0.0-development"
+home: https://github.com/emmekappa/ms-365-mcp-server
+sources:
+  - https://github.com/emmekappa/ms-365-mcp-server

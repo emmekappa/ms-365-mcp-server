@@ -1,0 +1,105 @@
+image:
+  repository: ghcr.io/emmekappa/ms-365-mcp-server
+  # Defaults to the chart's appVersion.
+  tag: ""
+  # sha256:… When set, the image is pulled by digest (tag@digest).
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+replicaCount: 1
+
+# Server settings, passed as environment variables. See the README of the server
+# for each one. Empty values are left out.
+config:
+  # Port of the HTTP transport.
+  port: 3000
+  # MS365_MCP_ORG_MODE: work and school accounts, with the org-only tools.
+  orgMode: true
+  # READ_ONLY: only the tools that read.
+  readOnly: true
+  # MS365_MCP_READ_ONLY_ALLOW_TOOLS: write tools that read-only mode keeps
+  # anyway, a regex matched against the whole tool name.
+  readOnlyAllowTools: ""
+  # MS365_MCP_PUBLIC_URL: the URL clients reach, such as https://mcp.example.com.
+  publicUrl: ""
+  # MS365_MCP_ALLOWED_REDIRECT_URIS: OAuth redirect URIs of the MCP clients, a
+  # list or a comma-separated string.
+  allowedRedirectUris: []
+  # MS365_MCP_ALLOWED_SCOPES: Graph scopes the server may use; tools that need
+  # other scopes are hidden. A list or a space-separated string.
+  allowedScopes: []
+  # MS365_MCP_TRUST_PROXY_HOPS: proxies in front of the server that append to
+  # X-Forwarded-For.
+  trustProxyHops: ""
+
+# Secret with the Entra app credentials, loaded with envFrom:
+# MS365_MCP_CLIENT_ID, MS365_MCP_CLIENT_SECRET, MS365_MCP_TENANT_ID.
+existingSecret: ""
+
+# Further environment variables, as a list of EnvVar.
+extraEnv: []
+extraEnvFrom: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+  # The server calls only Microsoft Graph: it needs no Kubernetes API token.
+  automountServiceAccountToken: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+# Writable scratch space: the root filesystem is read-only, so HOME and the
+# log directory live here.
+tmp:
+  sizeLimit: 256Mi
+
+service:
+  type: ClusterIP
+  port: 3000
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: http
+  periodSeconds: 10
+livenessProbe:
+  httpGet:
+    path: /
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 20
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 192Mi
+  limits:
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Gateway API HTTPRoute.
+httpRoute:
+  enabled: false
+  annotations: {}
+  parentRefs: []
+  hostnames: []
