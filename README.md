@@ -831,6 +831,14 @@ Environment variables:
 
 - `READ_ONLY=true|1`: Alternative to --read-only flag
 - `MS365_MCP_READ_ONLY_ALLOW_TOOLS=<regex>`: Write tools that read-only mode keeps anyway, matched against the whole tool name (case-insensitive). For example `set-my-current-work-location` keeps a deployment read-only except for setting the user's own work location. Grant the scopes those tools need (here `Calendars.ReadWrite`).
+- `MS365_MCP_COLLEAGUE_WORK_LOCATIONS=true`: Serves `get-colleague-work-locations` in HTTP mode: colleagues' work locations (office, remote, time off) for a date range. Graph lets delegated callers read only their own work plan, so this tool calls Graph with the app's own token (client credentials, `MS365_MCP_CLIENT_SECRET`). It runs only for a caller whose token Graph accepts and that was issued to this app in this tenant, it reads only work plan occurrences, and it honours each colleague's `maxSharedWorkLocationDetails` (`none` hides them, `specific` adds the place id). Whatever the server returns, the app's credential can read the full calendars it is granted: grant it with [RBAC for Applications](https://learn.microsoft.com/en-us/exchange/permissions-exo/application-rbac) instead of an Entra admin consent, scoped to the mailboxes it may read:
+
+  ```powershell
+  New-ServicePrincipal -AppId <client-id> -ObjectId <enterprise-app-object-id> -DisplayName "MS365 MCP"
+  New-ManagementScope -Name "MS365 MCP colleagues" -RecipientRestrictionFilter "MemberOfGroup -eq '<group-distinguished-name>'"
+  New-ManagementRoleAssignment -App <client-id> -Role "Application Calendars.Read" -CustomResourceScope "MS365 MCP colleagues"
+  ```
+
 - `ENABLED_TOOLS`: Filter tools using a regex pattern (alternative to --enabled-tools flag)
 - `ENABLED_TOOLS_FILE`: Path to a file with one regex per line (alternative to --enabled-tools-file). Blank lines and whole-line `#` comments are dropped, then lines are joined with `|` (same as `ENABLED_TOOLS=line1|line2|…`). Layering (later wins): `--enabled-tools` → `--enabled-tools-file` → `--preset` → `ENABLED_TOOLS` → `ENABLED_TOOLS_FILE`
 - `MS365_MCP_ORG_MODE=true|1`: Enable organization/work mode (alternative to --org-mode flag)
