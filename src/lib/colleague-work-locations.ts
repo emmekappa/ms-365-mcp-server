@@ -130,39 +130,75 @@ export function validateRequest(request: ColleagueWorkLocationsRequest): string 
   return undefined;
 }
 
+type GraphResult =
+  | { ok: true; body: Record<string, unknown> }
+  | { ok: false; status: number; message?: string };
+
 async function graphGet(
   deps: ColleagueWorkLocationsDeps,
-  appToken: string,
+  token: string,
   path: string,
   timeZone?: string
-): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; status: number }> {
-  const headers: Record<string, string> = { Authorization: `Bearer ${appToken}` };
+): Promise<GraphResult> {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
   if (timeZone) headers.Prefer = `outlook.timezone="${timeZone}"`;
   const response = await deps.fetch(`${deps.graphBaseUrl}/v1.0${path}`, { headers });
-  if (!response.ok) return { ok: false, status: response.status };
+  if (!response.ok) {
+    let message: string | undefined;
+    try {
+      const body = (await response.json()) as { error?: { message?: unknown } };
+      if (typeof body.error?.message === 'string') message = body.error.message.slice(0, 300);
+    } catch {
+      /* no JSON body */
+    }
+    return { ok: false, status: response.status, message };
+  }
   return { ok: true, body: (await response.json()) as Record<string, unknown> };
 }
 
-function failure(status: number): string {
-  if (status === 404) return 'User not found.';
-  if (status === 401 || status === 403) {
-    return 'Not readable: the user is outside the mailboxes this server may read.';
+function failure(result: { status: number; message?: string }): string {
+  const detail = result.message ? ` ${result.message}` : '';
+  if (result.status === 404) return `User not found.${detail}`;
+  if (result.status === 401 || result.status === 403) {
+    return `Not readable: the user is outside the mailboxes this server may read.${detail}`;
   }
-  return `Graph returned HTTP ${status}.`;
+  return `Graph returned HTTP ${result.status}.${detail}`;
+}
+
+const OBJECT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The user's object id. occurrencesView answers HTTP 500 ("Invalid smtp address") when
+ * the user is named by UPN, so an email is resolved first, with the caller's own token
+ * (delegated User.Read.All): the app token needs no directory permission.
+ */
+async function resolveObjectId(
+  deps: ColleagueWorkLocationsDeps,
+  callerToken: string,
+  user: string
+): Promise<{ id: string } | { error: string }> {
+  if (OBJECT_ID.test(user)) return { id: user };
+  const result = await graphGet(deps, callerToken, `/users/${encodeURIComponent(user)}?$select=id`);
+  if (!result.ok) return { error: failure(result) };
+  const id = result.body.id;
+  return typeof id === 'string' && OBJECT_ID.test(id) ? { id } : { error: 'User not found.' };
 }
 
 async function readColleague(
   deps: ColleagueWorkLocationsDeps,
+  callerToken: string,
   appToken: string,
   user: string,
   request: ColleagueWorkLocationsRequest
 ): Promise<ColleagueResult> {
-  const base = `/users/${encodeURIComponent(user)}/settings/workHoursAndLocations`;
+  const resolved = await resolveObjectId(deps, callerToken, user);
+  if ('error' in resolved) return { user, error: resolved.error };
+  const base = `/users/${resolved.id}/settings/workHoursAndLocations`;
 
   // The colleague's own sharing level. Without it the server cannot honour `none`, so it
   // returns nothing for that user.
   const setting = await graphGet(deps, appToken, `${base}?$select=maxSharedWorkLocationDetails`);
-  if (!setting.ok) return { user, error: failure(setting.status) };
+  if (!setting.ok) return { user, error: failure(setting) };
   const level = String(setting.body.maxSharedWorkLocationDetails ?? '');
   if (level === 'none') {
     return { user, shared: false, reason: 'The user does not share their work location.' };
@@ -178,7 +214,7 @@ async function readColleague(
       '?$select=workLocationType,start,end,placeId',
     request.timeZone
   );
-  if (!view.ok) return { user, error: failure(view.status) };
+  if (!view.ok) return { user, error: failure(view) };
 
   const values = Array.isArray(view.body.value)
     ? (view.body.value as Record<string, unknown>[])
@@ -207,7 +243,7 @@ export async function getColleagueWorkLocations(
   const users = [...new Set(request.users.map((u) => u.trim()))];
   return Promise.all(
     users.map((user) =>
-      readColleague(deps, appToken, user, request).catch(
+      readColleague(deps, callerToken as string, appToken, user, request).catch(
         (error: Error): ColleagueResult => ({ user, error: error.message })
       )
     )
